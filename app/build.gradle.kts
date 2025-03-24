@@ -36,7 +36,7 @@ android {
 }
 
 dependencies {
-
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
     implementation ("net.objecthunter:exp4j:0.4.8")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
