@@ -17,6 +17,7 @@ class MP3Player : AppCompatActivity() {
     lateinit private var nextB: Button;                  lateinit private var prevB: Button
     lateinit private var music: Array<MediaPlayer>;      lateinit private var runnable: Runnable
     lateinit private var handler: Handler;               lateinit private var cycleB: Button
+    lateinit private var volume: SeekBar
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class MP3Player : AppCompatActivity() {
         player = MediaPlayer.create(this@MP3Player, R.raw.music1)
         player2 = MediaPlayer.create(this@MP3Player, R.raw.music2)
 
+        volume = findViewById(R.id.seekVol)
         music = arrayOf(player, player2)
         playB = findViewById(R.id.play)
         nextB = findViewById(R.id.next)
@@ -96,6 +98,16 @@ class MP3Player : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        volume.setProgress(volume.max)
+        volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress : Int, fromUser: Boolean) {
+                music[playing].setVolume(progress / 100f, progress / 100f)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
 
         handler = Handler()
         seekbar.max = music[playing].duration
