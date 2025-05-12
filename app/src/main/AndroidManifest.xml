@@ -19,6 +19,9 @@
         android:theme="@style/Theme.MyApp"
         tools:targetApi="31">
         <activity
+            android:name=".GPS"
+            android:exported="false" />
+        <activity
             android:name=".MP3Player"
             android:exported="false" />
         <activity
