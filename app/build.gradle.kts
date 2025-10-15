@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation("org.zeromq:jeromq:0.5.3")
     implementation ("com.google.android.gms:play-services-location:21.0.1")
     implementation ("net.objecthunter:exp4j:0.4.8")
     implementation(libs.androidx.core.ktx)

@@ -15,6 +15,7 @@ import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import org.zeromq.ZMQ
 
 
 class GPS : AppCompatActivity() {
@@ -22,6 +23,54 @@ class GPS : AppCompatActivity() {
     private lateinit var VivodGPS: TextView
     private lateinit var locationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+
+    private val ZMQ_SERVER_ADDRESS = "tcp://10.95.7.29:5555"
+    private var zmqContext: ZMQ.Context? = null
+    private var zmqSocket: ZMQ.Socket? = null
+
+    private fun startZmqClient() {
+        Thread {
+            try {
+                zmqContext = ZMQ.context(1)
+
+                zmqSocket = zmqContext?.socket(ZMQ.PUSH)
+
+                zmqSocket?.connect(ZMQ_SERVER_ADDRESS)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    private fun sendLocationZmq(location: Location) {
+        val json = JSONObject()
+        json.put("latitude", location.latitude)
+        json.put("longitude", location.longitude)
+        json.put("timestamp", System.currentTimeMillis())
+        json.put("device_id", "android-client-1")
+
+        val message = json.toString()
+
+        Thread {
+            try {
+                if (zmqSocket != null) {
+
+                    val success = zmqSocket!!.send(message.toByteArray(ZMQ.CHARSET), 0)
+
+                    if (success) {
+                        println("ZMQ: Сообщение отправлено")
+                    } else {
+                        println("ZMQ: Ошибка отправки сообщения (send вернул false).")
+                    }
+                } else {
+                    println("ZMQ сокет не инициализирован (null).")
+                }
+            } catch (e: Exception) {
+                println("ZMQ: Критическая ошибка при отправке")
+            }
+        }.start()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +85,8 @@ class GPS : AppCompatActivity() {
 
         VivodGPS = findViewById(R.id.gps)
         locationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        startZmqClient()
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
@@ -80,6 +131,7 @@ class GPS : AppCompatActivity() {
                     val timeString = SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(Date(location.time))
                     VivodGPS.text = "Широта: ${location.latitude}, Долгота: ${location.longitude}, Время: $timeString"
                     saveLocationToJson(location)
+                    sendLocationZmq(location)
                 }
             }
         }
@@ -103,4 +155,11 @@ class GPS : AppCompatActivity() {
         super.onPause()
         locationClient.removeLocationUpdates(locationCallback)
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        zmqSocket?.close()
+        zmqContext?.term()
+    }
+
 }
