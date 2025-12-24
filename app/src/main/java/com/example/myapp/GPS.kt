@@ -1,6 +1,7 @@
 package com.example.myapp
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -16,15 +17,17 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import org.zeromq.ZMQ
-
+import android.telephony.CellInfoLte
+import android.telephony.TelephonyManager
 
 class GPS : AppCompatActivity() {
 
     private lateinit var VivodGPS: TextView
     private lateinit var locationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private lateinit var telephonyManager: TelephonyManager
 
-    private val ZMQ_SERVER_ADDRESS = "tcp://10.95.7.29:5555"
+    private val ZMQ_SERVER_ADDRESS = "tcp://10.60.199.30:5555"
     private var zmqContext: ZMQ.Context? = null
     private var zmqSocket: ZMQ.Socket? = null
 
@@ -49,6 +52,18 @@ class GPS : AppCompatActivity() {
         json.put("longitude", location.longitude)
         json.put("timestamp", System.currentTimeMillis())
         json.put("device_id", "android-client-1")
+
+        val allCellInfo = telephonyManager.allCellInfo
+        for (cellInfo in allCellInfo) {
+            if (cellInfo is CellInfoLte) {
+                val cellSignal = cellInfo.cellSignalStrength
+
+                json.put("RSRP", cellSignal.rsrp)
+                json.put("RSRQ", cellSignal.rsrq)
+                json.put("RSSI", cellSignal.rssi)
+            }
+        }
+
 
         val message = json.toString()
 
@@ -83,6 +98,10 @@ class GPS : AppCompatActivity() {
             insets
         }
 
+        telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+
+
+
         VivodGPS = findViewById(R.id.gps)
         locationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -92,6 +111,8 @@ class GPS : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
         } else if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 2)
+        } else if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_PHONE_STATE), 3)
         } else {
             startLocationUpdates()
         }
@@ -121,7 +142,7 @@ class GPS : AppCompatActivity() {
 
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 5000
+            interval = 3000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
